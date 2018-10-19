@@ -26,6 +26,12 @@ import net.java.sip.communicator.util.*;
 
 import org.eclipse.jetty.server.*;
 import org.jitsi.rest.*;
+import org.jitsi.service.neomedia.MediaStream;
+import org.jitsi.service.neomedia.MediaType;
+import org.jitsi.service.neomedia.stats.MediaStreamStats2;
+import org.jitsi.service.neomedia.stats.ReceiveTrackStats;
+import org.jitsi.service.neomedia.stats.SendTrackStats;
+import org.jitsi.service.neomedia.stats.TrackStats;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.stats.*;
@@ -44,133 +50,133 @@ import org.osgi.framework.*;
  * <tt>Content-Type: application/json</tt> under the base target
  * <tt>/colibri</tt>:
  * <table>
- *   <thead>
- *     <tr>
- *       <th>HTTP Method</th>
- *       <th>Resource</th>
- *       <th>Response</th>
- *     </tr>
- *   </thead>
- *   <tbody>
- *     <tr>
- *       <td>GET</td>
- *       <td>/colibri/conferences</td>
- *       <td>
- *         200 OK with a JSON array/list of JSON objects which represent
- *         conferences with <tt>id</tt> only. For example:
+ * <thead>
+ * <tr>
+ * <th>HTTP Method</th>
+ * <th>Resource</th>
+ * <th>Response</th>
+ * </tr>
+ * </thead>
+ * <tbody>
+ * <tr>
+ * <td>GET</td>
+ * <td>/colibri/conferences</td>
+ * <td>
+ * 200 OK with a JSON array/list of JSON objects which represent
+ * conferences with <tt>id</tt> only. For example:
  * <code>
  * [
- *   { &quot;id&quot; : &quot;a1b2c3&quot; },
- *   { &quot;id&quot; : &quot;d4e5f6&quot; }
+ * { &quot;id&quot; : &quot;a1b2c3&quot; },
+ * { &quot;id&quot; : &quot;d4e5f6&quot; }
  * ]
  * </code>
- *       </td>
- *     </tr>
- *     <tr>
- *       <td>POST</td>
- *       <td>/colibri/conferences</td>
- *       <td>
- *         <p>
- *         200 OK with a JSON object which represents the created conference if
- *         the request was with <tt>Content-Type: application/json</tt> and was
- *         a JSON object which represented a conference without <tt>id</tt> and,
- *         optionally, with contents and channels without <tt>id</tt>s. For
- *         example, a request could look like:
- *         </p>
+ * </td>
+ * </tr>
+ * <tr>
+ * <td>POST</td>
+ * <td>/colibri/conferences</td>
+ * <td>
+ * <p>
+ * 200 OK with a JSON object which represents the created conference if
+ * the request was with <tt>Content-Type: application/json</tt> and was
+ * a JSON object which represented a conference without <tt>id</tt> and,
+ * optionally, with contents and channels without <tt>id</tt>s. For
+ * example, a request could look like:
+ * </p>
  * <code>
  * {
- *   &quot;contents&quot; :
- *     [
- *       {
- *         &quot;name&quot; : &quot;audio&quot;,
- *         &quot;channels&quot; : [ { &quot;expire&quot; : 60 } ]
- *       },
- *       {
- *         &quot;name&quot; : &quot;video&quot;,
- *         &quot;channels&quot; : [ { &quot;expire&quot; : 60 } ]
- *       }
- *     ]
+ * &quot;contents&quot; :
+ * [
+ * {
+ * &quot;name&quot; : &quot;audio&quot;,
+ * &quot;channels&quot; : [ { &quot;expire&quot; : 60 } ]
+ * },
+ * {
+ * &quot;name&quot; : &quot;video&quot;,
+ * &quot;channels&quot; : [ { &quot;expire&quot; : 60 } ]
+ * }
+ * ]
  * }
  * </code>
- *         <p>
- *         The respective response could look like:
- *         </p>
+ * <p>
+ * The respective response could look like:
+ * </p>
  * <code>
  * {
- *   &quot;id&quot; : &quot;conference1&quot;,
- *   &quot;contents&quot; :
- *     [
- *       {
- *         &quot;name&quot; : &quot;audio&quot;,
- *         &quot;channels&quot; :
- *           [
- *             { &quot;id&quot; : &quot;channelA&quot; },
- *             { &quot;expire&quot; : 60 },
- *             { &quot;rtp-level-relay-type&quot; : &quot;translator&quot; }
- *           ]
- *       },
- *       {
- *         &quot;name&quot; : &quot;video&quot;,
- *         &quot;channels&quot; :
- *           [
- *             { &quot;id&quot; : &quot;channelV&quot; },
- *             { &quot;expire&quot; : 60 },
- *             { &quot;rtp-level-relay-type&quot; : &quot;translator&quot; }
- *           ]
- *       }
- *     ]
+ * &quot;id&quot; : &quot;conference1&quot;,
+ * &quot;contents&quot; :
+ * [
+ * {
+ * &quot;name&quot; : &quot;audio&quot;,
+ * &quot;channels&quot; :
+ * [
+ * { &quot;id&quot; : &quot;channelA&quot; },
+ * { &quot;expire&quot; : 60 },
+ * { &quot;rtp-level-relay-type&quot; : &quot;translator&quot; }
+ * ]
+ * },
+ * {
+ * &quot;name&quot; : &quot;video&quot;,
+ * &quot;channels&quot; :
+ * [
+ * { &quot;id&quot; : &quot;channelV&quot; },
+ * { &quot;expire&quot; : 60 },
+ * { &quot;rtp-level-relay-type&quot; : &quot;translator&quot; }
+ * ]
+ * }
+ * ]
  * }
  * </code>
- *       </td>
- *     </tr>
- *     <tr>
- *       <td>GET</td>
- *       <td>/colibri/conferences/{id}</td>
- *       <td>
- *         200 OK with a JSON object which represents the conference with the
- *         specified <tt>id</tt>. For example:
+ * </td>
+ * </tr>
+ * <tr>
+ * <td>GET</td>
+ * <td>/colibri/conferences/{id}</td>
+ * <td>
+ * 200 OK with a JSON object which represents the conference with the
+ * specified <tt>id</tt>. For example:
  * <code>
  * {
- *   &quot;id&quot; : &quot;{id}&quot;,
- *   &quot;contents&quot; :
- *     [
- *       {
- *         &quot;name&quot; : &quot;audio&quot;,
- *         &quot;channels&quot; :
- *           [
- *             { &quot;id&quot; : &quot;channelA&quot; },
- *             { &quot;expire&quot; : 60 },
- *             { &quot;rtp-level-relay-type&quot; : &quot;translator&quot; }
- *           ]
- *       },
- *       {
- *         &quot;name&quot; : &quot;video&quot;,
- *         &quot;channels&quot; :
- *           [
- *             { &quot;id&quot; : &quot;channelV&quot; },
- *             { &quot;expire&quot; : 60 },
- *             { &quot;rtp-level-relay-type&quot; : &quot;translator&quot; }
- *           ]
- *       }
- *     ]
+ * &quot;id&quot; : &quot;{id}&quot;,
+ * &quot;contents&quot; :
+ * [
+ * {
+ * &quot;name&quot; : &quot;audio&quot;,
+ * &quot;channels&quot; :
+ * [
+ * { &quot;id&quot; : &quot;channelA&quot; },
+ * { &quot;expire&quot; : 60 },
+ * { &quot;rtp-level-relay-type&quot; : &quot;translator&quot; }
+ * ]
+ * },
+ * {
+ * &quot;name&quot; : &quot;video&quot;,
+ * &quot;channels&quot; :
+ * [
+ * { &quot;id&quot; : &quot;channelV&quot; },
+ * { &quot;expire&quot; : 60 },
+ * { &quot;rtp-level-relay-type&quot; : &quot;translator&quot; }
+ * ]
+ * }
+ * ]
  * }
  * </code>
- *       </td>
- *     </tr>
- *     <tr>
- *       <td>PATCH</td>
- *       <td>/colibri/conferences/{id}</td>
- *       <td>
- *         <p>
- *         200 OK with a JSON object which represents the modified conference if
- *         the request was with <tt>Content-Type: application/json</tt> and was
- *         a JSON object which represented a conference without <tt>id</tt> or
- *         with the specified <tt>id</tt> and, optionally, with contents and
- *         channels with or without <tt>id</tt>s.
- *         </p>
- *       </td>
- *     </tr>
- *   </tbody>
+ * </td>
+ * </tr>
+ * <tr>
+ * <td>PATCH</td>
+ * <td>/colibri/conferences/{id}</td>
+ * <td>
+ * <p>
+ * 200 OK with a JSON object which represents the modified conference if
+ * the request was with <tt>Content-Type: application/json</tt> and was
+ * a JSON object which represented a conference without <tt>id</tt> or
+ * with the specified <tt>id</tt> and, optionally, with contents and
+ * channels with or without <tt>id</tt>s.
+ * </p>
+ * </td>
+ * </tr>
+ * </tbody>
  * </table>
  * </p>
  *
@@ -178,8 +184,7 @@ import org.osgi.framework.*;
  * @author Pawel Domas
  */
 class HandlerImpl
-    extends AbstractJSONHandler
-{
+        extends AbstractJSONHandler {
     /**
      * The base HTTP resource of COLIBRI-related JSON representations of
      * {@code Videobridge}.
@@ -204,7 +209,7 @@ class HandlerImpl
      * <tt>Videobridge</tt>.
      */
     private static final String DOMINANT_SPEAKER_IDENTIFICATION
-        = "dominant-speaker-identification";
+            = "dominant-speaker-identification";
 
     /**
      * The logger instance used by REST handler.
@@ -228,8 +233,7 @@ class HandlerImpl
      */
     private static final String MUC_CLIENT = "muc-client";
 
-    static
-    {
+    static {
         String colibriTarget = DEFAULT_COLIBRI_TARGET;
 
         if (!colibriTarget.endsWith("/"))
@@ -256,16 +260,15 @@ class HandlerImpl
      * Initializes a new {@code HandlerImpl} instance within a specific
      * {@code BundleContext}.
      *
-     * @param bundleContext the {@code BundleContext} within which the new
-     * instance is to be initialized
+     * @param bundleContext  the {@code BundleContext} within which the new
+     *                       instance is to be initialized
      * @param enableShutdown {@code true} if graceful shutdown is to be
-     * enabled; otherwise, {@code false}
-     * @param enableColibri {@code true} if /colibri/* endpoints are to be
-     * enabled; otherwise, {@code false}
+     *                       enabled; otherwise, {@code false}
+     * @param enableColibri  {@code true} if /colibri/* endpoints are to be
+     *                       enabled; otherwise, {@code false}
      */
     public HandlerImpl(BundleContext bundleContext, boolean enableShutdown,
-        boolean enableColibri)
-    {
+                       boolean enableColibri) {
         super(bundleContext);
 
         shutdownEnabled = enableShutdown;
@@ -283,13 +286,13 @@ class HandlerImpl
      * Retrieves a JSON representation of a <tt>Conference</tt> with ID
      * <tt>target</tt> of (the associated) <tt>Videobridge</tt>.
      *
-     * @param target the ID of the <tt>Conference</tt> of (the associated)
-     * <tt>Videobridge</tt> to represent in JSON format
+     * @param target      the ID of the <tt>Conference</tt> of (the associated)
+     *                    <tt>Videobridge</tt> to represent in JSON format
      * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
+     * @param request     the request either as the {@code Request} object or a
+     *                    wrapper of that request
+     * @param response    the response either as the {@code Response} object or a
+     *                    wrapper of that response
      * @throws IOException
      * @throws ServletException
      */
@@ -298,64 +301,50 @@ class HandlerImpl
             Request baseRequest,
             HttpServletRequest request,
             HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
+            throws IOException,
+            ServletException {
         Videobridge videobridge = getVideobridge();
 
-        if (videobridge == null)
-        {
+        if (videobridge == null) {
             response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-        }
-        else
-        {
+        } else {
             // We allow requests for certain sub-resources of a Conference
             // though such as DominantSpeakerIdentification.
             int conferenceIDEndIndex = target.indexOf('/');
             String conferenceID = target;
 
             if ((conferenceIDEndIndex > 0)
-                    && (conferenceIDEndIndex < target.length() - 1))
-            {
+                    && (conferenceIDEndIndex < target.length() - 1)) {
                 target = target.substring(conferenceIDEndIndex + 1);
-                if (DOMINANT_SPEAKER_IDENTIFICATION.equals(target))
-                {
+                if (DOMINANT_SPEAKER_IDENTIFICATION.equals(target)) {
                     conferenceID
-                        = conferenceID.substring(0, conferenceIDEndIndex);
+                            = conferenceID.substring(0, conferenceIDEndIndex);
                 }
             }
 
             Conference conference
-                = videobridge.getConference(conferenceID, null);
+                    = videobridge.getConference(conferenceID, null);
 
-            if (conference == null)
-            {
+            if (conference == null) {
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            }
-            else if (DOMINANT_SPEAKER_IDENTIFICATION.equals(target))
-            {
+            } else if (DOMINANT_SPEAKER_IDENTIFICATION.equals(target)) {
                 doGetDominantSpeakerIdentificationJSON(
                         conference,
                         baseRequest,
                         request,
                         response);
-            }
-            else
-            {
+            } else {
                 ColibriConferenceIQ conferenceIQ = new ColibriConferenceIQ();
 
                 conference.describeDeep(conferenceIQ);
 
                 JSONObject conferenceJSONObject
-                    = JSONSerializer.serializeConference(conferenceIQ);
+                        = JSONSerializer.serializeConference(conferenceIQ);
 
-                if (conferenceJSONObject == null)
-                {
+                if (conferenceJSONObject == null) {
                     response.setStatus(
                             HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                }
-                else
-                {
+                } else {
                     response.setStatus(HttpServletResponse.SC_OK);
                     conferenceJSONObject.writeJSONString(response.getWriter());
                 }
@@ -367,10 +356,10 @@ class HandlerImpl
      * Lists the <tt>Conference</tt>s of (the associated) <tt>Videobridge</tt>.
      *
      * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
+     * @param request     the request either as the {@code Request} object or a
+     *                    wrapper of that request
+     * @param response    the response either as the {@code Response} object or a
+     *                    wrapper of that response
      * @throws IOException
      * @throws ServletException
      */
@@ -378,22 +367,17 @@ class HandlerImpl
             Request baseRequest,
             HttpServletRequest request,
             HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
+            throws IOException,
+            ServletException {
         Videobridge videobridge = getVideobridge();
 
-        if (videobridge == null)
-        {
+        if (videobridge == null) {
             response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-        }
-        else
-        {
+        } else {
             Conference[] conferences = videobridge.getConferences();
             List<ColibriConferenceIQ> conferenceIQs = new ArrayList<>();
 
-            for (Conference conference : conferences)
-            {
+            for (Conference conference : conferences) {
                 ColibriConferenceIQ conferenceIQ = new ColibriConferenceIQ();
 
                 conferenceIQ.setID(conference.getID());
@@ -401,7 +385,7 @@ class HandlerImpl
             }
 
             JSONArray conferencesJSONArray
-                = JSONSerializer.serializeConferences(conferenceIQs);
+                    = JSONSerializer.serializeConferences(conferenceIQs);
 
             if (conferencesJSONArray == null)
                 conferencesJSONArray = new JSONArray();
@@ -416,10 +400,10 @@ class HandlerImpl
      * <tt>DominantSpeakerIdentification</tt> of a specific <tt>Conference</tt>.
      *
      * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
+     * @param request     the request either as the {@code Request} object or a
+     *                    wrapper of that request
+     * @param response    the response either as the {@code Response} object or a
+     *                    wrapper of that response
      * @throws IOException
      * @throws ServletException
      */
@@ -428,24 +412,19 @@ class HandlerImpl
             Request baseRequest,
             HttpServletRequest request,
             HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
+            throws IOException,
+            ServletException {
         ConferenceSpeechActivity conferenceSpeechActivity
-            = conference.getSpeechActivity();
+                = conference.getSpeechActivity();
 
-        if (conferenceSpeechActivity == null)
-        {
+        if (conferenceSpeechActivity == null) {
             response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-        }
-        else
-        {
+        } else {
             JSONObject jsonObject
-                = conferenceSpeechActivity
+                    = conferenceSpeechActivity
                     .doGetDominantSpeakerIdentificationJSON();
 
-            if (jsonObject != null)
-            {
+            if (jsonObject != null) {
                 response.setStatus(HttpServletResponse.SC_OK);
                 jsonObject.writeJSONString(response.getWriter());
             }
@@ -460,19 +439,15 @@ class HandlerImpl
             Request baseRequest,
             HttpServletRequest request,
             HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
+            throws IOException,
+            ServletException {
         beginResponse(/* target */ null, baseRequest, request, response);
 
         Videobridge videobridge = getVideobridge();
 
-        if (videobridge == null)
-        {
+        if (videobridge == null) {
             response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-        }
-        else
-        {
+        } else {
             getHealthJSON(videobridge, baseRequest, request, response);
         }
 
@@ -484,47 +459,41 @@ class HandlerImpl
      * {@link Videobridge}.
      *
      * @param videobridge the {@code Videobridge} to get the health (status) of
-     * in the form of a JSON representation
+     *                    in the form of a JSON representation
      * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
+     * @param request     the request either as the {@code Request} object or a
+     *                    wrapper of that request
+     * @param response    the response either as the {@code Response} object or a
+     *                    wrapper of that response
      * @throws IOException
      * @throws ServletException
      */
     public static void getHealthJSON(
-        Videobridge videobridge,
-        Request baseRequest,
-        HttpServletRequest request,
-        HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
+            Videobridge videobridge,
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
+            throws IOException,
+            ServletException {
         int status;
         String reason = null;
 
-        try
-        {
+        try {
             // Check if the videobridge is functional
             videobridge.healthCheck();
             status = HttpServletResponse.SC_OK;
-        }
-        catch (Exception ex)
-        {
+        } catch (Exception ex) {
             if (ex instanceof IOException)
                 throw (IOException) ex;
             else if (ex instanceof ServletException)
                 throw (ServletException) ex;
-            else
-            {
+            else {
                 status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
                 reason = ex.getMessage();
             }
         }
 
-        if (reason != null)
-        {
+        if (reason != null) {
             response.getOutputStream().println(reason);
         }
         response.setStatus(status);
@@ -536,10 +505,10 @@ class HandlerImpl
      * associated) <tt>Videobridge</tt>.
      *
      * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
+     * @param request     the request either as the {@code Request} object or a
+     *                    wrapper of that request
+     * @param response    the response either as the {@code Response} object or a
+     *                    wrapper of that response
      * @throws IOException
      * @throws ServletException
      */
@@ -547,38 +516,31 @@ class HandlerImpl
             Request baseRequest,
             HttpServletRequest request,
             HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
+            throws IOException,
+            ServletException {
         BundleContext bundleContext = getBundleContext();
 
-        if (bundleContext != null)
-        {
+        if (bundleContext != null) {
             StatsManager statsManager
-                = ServiceUtils.getService(bundleContext, StatsManager.class);
+                    = ServiceUtils.getService(bundleContext, StatsManager.class);
 
-            if (statsManager != null)
-            {
+            if (statsManager != null) {
                 Iterator<Statistics> i
-                    = statsManager.getStatistics().iterator();
+                        = statsManager.getStatistics().iterator();
                 Statistics statistics = null;
 
-                if (i.hasNext())
-                {
+                if (i.hasNext()) {
                     statistics = i.next();
                 }
 
                 JSONObject statisticsJSONObject
-                    = JSONSerializer.serializeStatistics(statistics);
+                        = JSONSerializer.serializeStatistics(statistics);
                 Writer writer = response.getWriter();
 
                 response.setStatus(HttpServletResponse.SC_OK);
-                if (statisticsJSONObject == null)
-                {
+                if (statisticsJSONObject == null) {
                     writer.write("null");
-                }
-                else
-                {
+                } else {
                     statisticsJSONObject.writeJSONString(writer);
                 }
 
@@ -589,17 +551,98 @@ class HandlerImpl
         response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
     }
 
+    private void doGetStatisticsByConferenceIdJSON(
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response,
+            String conferenceID)
+            throws IOException,
+            ServletException {
+        BundleContext bundleContext = getBundleContext();
+
+        Videobridge videobridge = getVideobridge();
+
+        if (videobridge == null) {
+            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+            return;
+        }
+
+        Conference conference
+                = videobridge.getConference(conferenceID, null);
+
+        if (conference == null) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        }
+
+        long packetsReceived = 0, packetsReceivedLost = 0;
+        long bitrateDownloadBps = 0, bitrateUploadBps = 0;
+        int packetRateUpload = 0, packetRateDownload = 0;
+        double fractionLostSum = 0d;
+        boolean video = false;
+        boolean audio = false;
+
+        for (Content content : conference.getContents()) {
+            MediaType mediaType = content.getMediaType();
+            int contentChannelCount = content.getChannelCount();
+            if (MediaType.AUDIO.equals(mediaType)) {
+                audio = true;
+            } else if (MediaType.VIDEO.equals(mediaType)) {
+                video = true;
+            }
+
+            for (Channel channel : content.getChannels()) {
+                if (channel instanceof RtpChannel) {
+                    RtpChannel rtpChannel = (RtpChannel) channel;
+                    MediaStream stream = rtpChannel.getStream();
+                    if (stream == null) {
+                        continue;
+                    }
+                    MediaStreamStats2 stats
+                            = stream.getMediaStreamStats();
+                    ReceiveTrackStats receiveStats
+                            = stats.getReceiveStats();
+                    SendTrackStats sendStats = stats.getSendStats();
+
+                    packetsReceived += receiveStats.getCurrentPackets();
+                    packetsReceivedLost
+                            += receiveStats.getCurrentPacketsLost();
+                    fractionLostSum += sendStats.getLossRate();
+                    packetRateDownload += receiveStats.getPacketRate();
+                    packetRateUpload += sendStats.getPacketRate();
+
+                    bitrateDownloadBps += receiveStats.getBitrate();
+                    bitrateUploadBps += sendStats.getBitrate();
+                }
+            }
+        }
+
+        Map result = new HashMap<String, Object>();
+        result.put("packetsReceived", packetsReceived);
+        result.put("packetsReceivedLost", packetsReceivedLost);
+        result.put("bitrateDownloadBps", bitrateDownloadBps);
+        result.put("bitrateUploadBps", bitrateUploadBps);
+        result.put("packetRateUpload", packetRateUpload);
+        result.put("packetRateDownload", packetRateDownload);
+        result.put("fractionLostSum", fractionLostSum);
+        result.put("video", video);
+        result.put("audio", audio);
+
+        Writer writer = response.getWriter();
+        writer.write(new JSONObject(result).toJSONString());
+        response.setStatus(HttpServletResponse.SC_OK);
+    }
+
     /**
      * Modifies a <tt>Conference</tt> with ID <tt>target</tt> in (the
      * associated) <tt>Videobridge</tt>.
      *
-     * @param target the ID of the <tt>Conference</tt> to modify in (the
-     * associated) <tt>Videobridge</tt>
+     * @param target      the ID of the <tt>Conference</tt> to modify in (the
+     *                    associated) <tt>Videobridge</tt>
      * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
+     * @param request     the request either as the {@code Request} object or a
+     *                    wrapper of that request
+     * @param response    the response either as the {@code Response} object or a
+     *                    wrapper of that response
      * @throws IOException
      * @throws ServletException
      */
@@ -608,111 +651,89 @@ class HandlerImpl
             Request baseRequest,
             HttpServletRequest request,
             HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
+            throws IOException,
+            ServletException {
         Videobridge videobridge = getVideobridge();
 
-        if (videobridge == null)
-        {
+        if (videobridge == null) {
             response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-        }
-        else
-        {
+        } else {
             Conference conference = videobridge.getConference(target, null);
 
-            if (conference == null)
-            {
+            if (conference == null) {
                 String message = String.format("Failed to patch" +
                         " conference: %s, conference not found", target);
                 logger.error(message);
                 response.getOutputStream().println(message);
 
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            }
-            else if (RESTUtil.isJSONContentType(request.getContentType()))
-            {
+            } else if (RESTUtil.isJSONContentType(request.getContentType())) {
                 Object requestJSONObject = null;
                 int status = 0;
 
-                try
-                {
+                try {
                     requestJSONObject
-                        = new JSONParser().parse(request.getReader());
+                            = new JSONParser().parse(request.getReader());
                     if ((requestJSONObject == null)
-                            || !(requestJSONObject instanceof JSONObject))
-                    {
+                            || !(requestJSONObject instanceof JSONObject)) {
                         String message = String.format("Failed to patch" +
-                                        " conference: %s, could not parse" +
-                                        " JSON", target);
+                                " conference: %s, could not parse" +
+                                " JSON", target);
                         logger.error(message);
                         response.getOutputStream().println(message);
 
                         status = HttpServletResponse.SC_BAD_REQUEST;
                     }
-                }
-                catch (ParseException pe)
-                {
+                } catch (ParseException pe) {
                     String message = String.format("Failed to patch" +
                                     " conference: %s, could not parse" +
-                            " JSON message: %s", target,
+                                    " JSON message: %s", target,
                             pe.getMessage());
                     logger.error(message);
                     response.getOutputStream().println(message);
 
                     status = HttpServletResponse.SC_BAD_REQUEST;
                 }
-                if (status == 0)
-                {
+                if (status == 0) {
                     ColibriConferenceIQ requestConferenceIQ
-                        = JSONDeserializer.deserializeConference(
-                                (JSONObject) requestJSONObject);
+                            = JSONDeserializer.deserializeConference(
+                            (JSONObject) requestJSONObject);
 
                     if ((requestConferenceIQ == null)
                             || ((requestConferenceIQ.getID() != null)
-                                    && !requestConferenceIQ.getID().equals(
-                                            conference.getID())))
-                    {
+                            && !requestConferenceIQ.getID().equals(
+                            conference.getID()))) {
                         String message = String.format("Failed to patch" +
-                                        " conference: %s, conference JSON" +
+                                " conference: %s, conference JSON" +
                                 " has invalid conference id", target);
                         logger.error(message);
                         response.getOutputStream().println(message);
 
                         status = HttpServletResponse.SC_BAD_REQUEST;
-                    }
-                    else
-                    {
+                    } else {
                         ColibriConferenceIQ responseConferenceIQ = null;
 
-                        try
-                        {
+                        try {
                             IQ responseIQ
-                                = videobridge.handleColibriConferenceIQ(
-                                        requestConferenceIQ,
-                                        Videobridge.OPTION_ALLOW_NO_FOCUS);
+                                    = videobridge.handleColibriConferenceIQ(
+                                    requestConferenceIQ,
+                                    Videobridge.OPTION_ALLOW_NO_FOCUS);
 
-                            if (responseIQ instanceof ColibriConferenceIQ)
-                            {
+                            if (responseIQ instanceof ColibriConferenceIQ) {
                                 responseConferenceIQ
-                                    = (ColibriConferenceIQ) responseIQ;
-                            }
-                            else
-                            {
+                                        = (ColibriConferenceIQ) responseIQ;
+                            } else {
                                 status = getHttpStatusCodeForResultIq(responseIQ);
                             }
-                            if(responseIQ.getError() != null)
-                            {
+                            if (responseIQ.getError() != null) {
                                 String message = String.format("Failed to patch" +
-                                        " conference: %s, message: %s", target,
+                                                " conference: %s, message: %s", target,
                                         responseIQ.getError().getDescriptiveText());
                                 logger.error(message);
                                 response.getOutputStream().println(message);
                             }
 
-                        }
-                        catch (Exception e)
-                        {
+                        } catch (Exception e) {
                             String message = String.format("Failed to patch" +
                                             " conference: %s, message: %s", target,
                                     e.getMessage());
@@ -721,11 +742,10 @@ class HandlerImpl
 
                             status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
                         }
-                        if (status == 0 && responseConferenceIQ != null)
-                        {
+                        if (status == 0 && responseConferenceIQ != null) {
                             JSONObject responseJSONObject
-                                = JSONSerializer.serializeConference(
-                                        responseConferenceIQ);
+                                    = JSONSerializer.serializeConference(
+                                    responseConferenceIQ);
 
                             if (responseJSONObject == null)
                                 responseJSONObject = new JSONObject();
@@ -735,14 +755,10 @@ class HandlerImpl
                                     response.getWriter());
                         }
                     }
-                }
-                else
-                {
+                } else {
                     response.setStatus(status);
                 }
-            }
-            else
-            {
+            } else {
                 String message = String.format("Failed to patch" +
                                 " conference: %s, invalid content type, must be %s",
                         target, RESTUtil.JSON_CONTENT_TYPE);
@@ -759,10 +775,10 @@ class HandlerImpl
      * <tt>Videobridge</tt>.
      *
      * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
+     * @param request     the request either as the {@code Request} object or a
+     *                    wrapper of that request
+     * @param response    the response either as the {@code Response} object or a
+     *                    wrapper of that response
      * @throws IOException
      * @throws ServletException
      */
@@ -770,26 +786,20 @@ class HandlerImpl
             Request baseRequest,
             HttpServletRequest request,
             HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
+            throws IOException,
+            ServletException {
         Videobridge videobridge = getVideobridge();
 
-        if (videobridge == null)
-        {
+        if (videobridge == null) {
             response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-        }
-        else if (RESTUtil.isJSONContentType(request.getContentType()))
-        {
+        } else if (RESTUtil.isJSONContentType(request.getContentType())) {
             Object requestJSONObject = null;
             int status = 0;
 
-            try
-            {
+            try {
                 requestJSONObject = new JSONParser().parse(request.getReader());
                 if ((requestJSONObject == null)
-                        || !(requestJSONObject instanceof JSONObject))
-                {
+                        || !(requestJSONObject instanceof JSONObject)) {
                     String message = "Failed to create conference, could" +
                             " not parse JSON";
                     logger.error(message);
@@ -797,9 +807,7 @@ class HandlerImpl
 
                     status = HttpServletResponse.SC_BAD_REQUEST;
                 }
-            }
-            catch (ParseException pe)
-            {
+            } catch (ParseException pe) {
                 String message = String.format("Failed to create conference," +
                         " could not parse JSON, message: %s", pe.getMessage());
                 logger.error(message);
@@ -807,56 +815,44 @@ class HandlerImpl
 
                 status = HttpServletResponse.SC_BAD_REQUEST;
             }
-            if (status == 0)
-            {
+            if (status == 0) {
                 ColibriConferenceIQ requestConferenceIQ
-                    = JSONDeserializer.deserializeConference(
-                            (JSONObject) requestJSONObject);
+                        = JSONDeserializer.deserializeConference(
+                        (JSONObject) requestJSONObject);
 
                 if ((requestConferenceIQ == null)
-                        || (requestConferenceIQ.getID() != null))
-                {
+                        || (requestConferenceIQ.getID() != null)) {
                     status = HttpServletResponse.SC_BAD_REQUEST;
-                }
-                else
-                {
+                } else {
                     ColibriConferenceIQ responseConferenceIQ = null;
 
-                    try
-                    {
+                    try {
                         IQ responseIQ
-                            = videobridge.handleColibriConferenceIQ(
-                                    requestConferenceIQ,
-                                    Videobridge.OPTION_ALLOW_NO_FOCUS);
+                                = videobridge.handleColibriConferenceIQ(
+                                requestConferenceIQ,
+                                Videobridge.OPTION_ALLOW_NO_FOCUS);
 
-                        if (responseIQ instanceof ColibriConferenceIQ)
-                        {
+                        if (responseIQ instanceof ColibriConferenceIQ) {
                             responseConferenceIQ
-                                = (ColibriConferenceIQ) responseIQ;
-                        }
-                        else
-                        {
+                                    = (ColibriConferenceIQ) responseIQ;
+                        } else {
                             status = getHttpStatusCodeForResultIq(responseIQ);
                         }
-                        if(responseIQ.getError() != null)
-                        {
+                        if (responseIQ.getError() != null) {
                             String message = String.format("Failed to create " +
-                                    "conference, message: %s",responseIQ
+                                    "conference, message: %s", responseIQ
                                     .getError().getDescriptiveText());
                             logger.error(message);
                             response.getOutputStream().println(message);
 
                         }
-                    }
-                    catch (Exception e)
-                    {
+                    } catch (Exception e) {
                         status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
                     }
-                    if (status == 0 && responseConferenceIQ != null)
-                    {
+                    if (status == 0 && responseConferenceIQ != null) {
                         JSONObject responseJSONObject
-                            = JSONSerializer.serializeConference(
-                                    responseConferenceIQ);
+                                = JSONSerializer.serializeConference(
+                                responseConferenceIQ);
 
                         if (responseJSONObject == null)
                             responseJSONObject = new JSONObject();
@@ -866,14 +862,10 @@ class HandlerImpl
                                 response.getWriter());
                     }
                 }
-            }
-            else
-            {
+            } else {
                 response.setStatus(status);
             }
-        }
-        else
-        {
+        } else {
             response.setStatus(HttpServletResponse.SC_NOT_ACCEPTABLE);
         }
     }
@@ -881,18 +873,15 @@ class HandlerImpl
     private void doPostShutdownJSON(Request baseRequest,
                                     HttpServletRequest request,
                                     HttpServletResponse response)
-        throws IOException
-    {
+            throws IOException {
         Videobridge videobridge = getVideobridge();
 
-        if (videobridge == null)
-        {
+        if (videobridge == null) {
             response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
             return;
         }
 
-        if (!RESTUtil.isJSONContentType(request.getContentType()))
-        {
+        if (!RESTUtil.isJSONContentType(request.getContentType())) {
             response.setStatus(HttpServletResponse.SC_NOT_ACCEPTABLE);
             return;
         }
@@ -900,60 +889,46 @@ class HandlerImpl
         Object requestJSONObject;
         int status;
 
-        try
-        {
+        try {
             requestJSONObject = new JSONParser().parse(request.getReader());
             if ((requestJSONObject == null)
-                || !(requestJSONObject instanceof JSONObject))
-            {
+                    || !(requestJSONObject instanceof JSONObject)) {
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 return;
             }
-        }
-        catch (ParseException pe)
-        {
+        } catch (ParseException pe) {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             return;
         }
 
         ShutdownIQ requestShutdownIQ
-            = JSONDeserializer.deserializeShutdownIQ(
-                    (JSONObject) requestJSONObject);
+                = JSONDeserializer.deserializeShutdownIQ(
+                (JSONObject) requestJSONObject);
 
-        if ((requestShutdownIQ == null))
-        {
+        if ((requestShutdownIQ == null)) {
             status = HttpServletResponse.SC_BAD_REQUEST;
-        }
-        else
-        {
+        } else {
             // Fill source address
             String ipAddress = request.getHeader("X-FORWARDED-FOR");
-            if (ipAddress == null)
-            {
+            if (ipAddress == null) {
                 ipAddress = request.getRemoteAddr();
             }
 
             requestShutdownIQ.setFrom(JidCreate.from(ipAddress));
 
-            try
-            {
+            try {
                 IQ responseIQ
-                    = videobridge.handleShutdownIQ(
-                            requestShutdownIQ);
+                        = videobridge.handleShutdownIQ(
+                        requestShutdownIQ);
 
-                if (IQ.Type.result.equals(responseIQ.getType()))
-                {
+                if (IQ.Type.result.equals(responseIQ.getType())) {
                     status = HttpServletResponse.SC_OK;
-                }
-                else
-                {
+                } else {
                     status = getHttpStatusCodeForResultIq(responseIQ);
                 }
-            }
-            catch (Exception e)
-            {
+            } catch (Exception e) {
                 logger.error(
-                    "Error while trying to handle shutdown request", e);
+                        "Error while trying to handle shutdown request", e);
                 status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
             }
         }
@@ -968,8 +943,7 @@ class HandlerImpl
      * {@code Handler} or {@code null} if no {@code Videobridge} instance is
      * available to this Jetty {@code Handler}
      */
-    public Videobridge getVideobridge()
-    {
+    public Videobridge getVideobridge() {
         return getService(Videobridge.class);
     }
 
@@ -978,12 +952,12 @@ class HandlerImpl
      * <tt>Conference</tt>, <tt>Content</tt>, and <tt>Channel</tt>) represented
      * in JSON format.
      *
-     * @param target the target of the request
+     * @param target      the target of the request
      * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
+     * @param request     the request either as the {@code Request} object or a
+     *                    wrapper of that request
+     * @param response    the response either as the {@code Response} object or a
+     *                    wrapper of that response
      * @throws IOException
      * @throws ServletException
      */
@@ -992,191 +966,145 @@ class HandlerImpl
             Request baseRequest,
             HttpServletRequest request,
             HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
-        if (!colibriEnabled)
-        {
+            throws IOException,
+            ServletException {
+        if (!colibriEnabled) {
             response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
             return;
         }
 
-        if (target == null)
-        {
+        if (target == null) {
             // TODO Auto-generated method stub
-        }
-        else if (target.startsWith(CONFERENCES))
-        {
+        } else if (target.startsWith(CONFERENCES)) {
             target = target.substring(CONFERENCES.length());
             if (target.startsWith("/"))
                 target = target.substring(1);
 
             String requestMethod = request.getMethod();
 
-            if ("".equals(target))
-            {
-                if (GET_HTTP_METHOD.equals(requestMethod))
-                {
+            if ("".equals(target)) {
+                if (GET_HTTP_METHOD.equals(requestMethod)) {
                     // List the Conferences of Videobridge.
                     doGetConferencesJSON(baseRequest, request, response);
-                }
-                else if (POST_HTTP_METHOD.equals(requestMethod))
-                {
+                } else if (POST_HTTP_METHOD.equals(requestMethod)) {
                     // Create a new Conference in Videobridge.
                     doPostConferencesJSON(baseRequest, request, response);
-                }
-                else
-                {
+                } else {
                     response.setStatus(
-                        HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+                            HttpServletResponse.SC_METHOD_NOT_ALLOWED);
                 }
-            }
-            else
-            {
+            } else {
                 // The target at this point of the execution is reduced to a
                 // String which starts with a Conference ID.
-                if (GET_HTTP_METHOD.equals(requestMethod))
-                {
+                if (GET_HTTP_METHOD.equals(requestMethod)) {
                     // Retrieve a representation of a Conference of Videobridge.
                     doGetConferenceJSON(
-                        target,
-                        baseRequest,
-                        request,
-                        response);
-                }
-                else if (PATCH_HTTP_METHOD.equals(requestMethod))
-                {
+                            target,
+                            baseRequest,
+                            request,
+                            response);
+                } else if (PATCH_HTTP_METHOD.equals(requestMethod)) {
                     // Modify a Conference of Videobridge.
                     doPatchConferenceJSON(
-                        target,
-                        baseRequest,
-                        request,
-                        response);
-                }
-                else
-                {
+                            target,
+                            baseRequest,
+                            request,
+                            response);
+                } else {
                     response.setStatus(
-                        HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+                            HttpServletResponse.SC_METHOD_NOT_ALLOWED);
                 }
             }
-        }
-        else if (target.equals(STATISTICS))
-        {
-            if (GET_HTTP_METHOD.equals(request.getMethod()))
-            {
+        } else if (target.startsWith(STATISTICS)) {
+            if (GET_HTTP_METHOD.equals(request.getMethod())) {
+                String[] paths = target.split("/");
                 // Get the VideobridgeStatistics of Videobridge.
-                doGetStatisticsJSON(baseRequest, request, response);
-            }
-            else
-            {
+                if (paths.length == 1) {
+                    doGetStatisticsJSON(baseRequest, request, response);
+                } else if (paths.length == 2) {
+                    doGetStatisticsByConferenceIdJSON(baseRequest, request, response, paths[1]);
+                }
+
+            } else {
                 response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
             }
-        }
-        else if (target.equals(SHUTDOWN))
-        {
-            if (!shutdownEnabled)
-            {
+        } else if (target.equals(SHUTDOWN)) {
+            if (!shutdownEnabled) {
                 response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
                 return;
             }
 
-            if (POST_HTTP_METHOD.equals(request.getMethod()))
-            {
+            if (POST_HTTP_METHOD.equals(request.getMethod())) {
                 doPostShutdownJSON(baseRequest, request, response);
-            }
-            else
-            {
+            } else {
                 response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
             }
-        }
-        else if (target.startsWith(MUC_CLIENT + "/"))
-        {
+        } else if (target.startsWith(MUC_CLIENT + "/")) {
             doHandleMucClientRequest(
-                target.substring((MUC_CLIENT + "/").length()),
-                request,
-                response);
+                    target.substring((MUC_CLIENT + "/").length()),
+                    request,
+                    response);
         }
     }
 
     /**
      * Handles a request to /colibri/muc-client/.
-     * @param target the target URL with the part before "muc-client/" stripped.
-     * @param request the request.
+     *
+     * @param target   the target URL with the part before "muc-client/" stripped.
+     * @param request  the request.
      * @param response the response being prepared.
      */
     private void doHandleMucClientRequest(
-        String target,
-        HttpServletRequest request,
-        HttpServletResponse response)
-    {
-        if (!POST_HTTP_METHOD.equals(request.getMethod()))
-        {
+            String target,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+        if (!POST_HTTP_METHOD.equals(request.getMethod())) {
             response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
             return;
         }
 
-        if (!RESTUtil.isJSONContentType(request.getContentType()))
-        {
+        if (!RESTUtil.isJSONContentType(request.getContentType())) {
             response.setStatus(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE);
             return;
         }
 
         JSONObject requestJSONObject;
-        try
-        {
+        try {
             Object o = new JSONParser().parse(request.getReader());
-            if (o instanceof JSONObject)
-            {
+            if (o instanceof JSONObject) {
                 requestJSONObject = (JSONObject) o;
-            }
-            else
-            {
+            } else {
                 requestJSONObject = null;
             }
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             requestJSONObject = null;
         }
 
-        if (requestJSONObject == null)
-        {
+        if (requestJSONObject == null) {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             return;
         }
 
         ClientConnectionImpl clientConnectionImpl
-            = getService(ClientConnectionImpl.class);
-        if (clientConnectionImpl == null)
-        {
+                = getService(ClientConnectionImpl.class);
+        if (clientConnectionImpl == null) {
             response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
             return;
         }
 
-        if ("add".equals(target))
-        {
-            if (clientConnectionImpl.addMucClient(requestJSONObject))
-            {
+        if ("add".equals(target)) {
+            if (clientConnectionImpl.addMucClient(requestJSONObject)) {
                 response.setStatus(HttpServletResponse.SC_OK);
-            }
-            else
-            {
+            } else {
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             }
-        }
-        else if ("remove".equals(target))
-        {
-            if (clientConnectionImpl.removeMucClient(requestJSONObject))
-            {
+        } else if ("remove".equals(target)) {
+            if (clientConnectionImpl.removeMucClient(requestJSONObject)) {
                 response.setStatus(HttpServletResponse.SC_OK);
-            }
-            else
-            {
+            } else {
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             }
-        }
-        else
-        {
+        } else {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             return;
         }
@@ -1191,17 +1119,15 @@ class HandlerImpl
             Request baseRequest,
             HttpServletRequest request,
             HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
+            throws IOException,
+            ServletException {
         super.handleJSON(target, baseRequest, request, response);
 
         if (baseRequest.isHandled())
             return; // The super implementation has handled the request.
 
         // The target starts with "/colibri/".
-        if (target.startsWith(COLIBRI_TARGET))
-        {
+        if (target.startsWith(COLIBRI_TARGET)) {
             target = target.substring(COLIBRI_TARGET.length());
 
             // FIXME In order to not invoke beginResponse() and endResponse() in
@@ -1224,20 +1150,15 @@ class HandlerImpl
 
             int newResponseStatus = response.getStatus();
 
-            if (newResponseStatus == HttpServletResponse.SC_NOT_IMPLEMENTED)
-            {
+            if (newResponseStatus == HttpServletResponse.SC_NOT_IMPLEMENTED) {
                 // Restore the status code which was in place before we replaced
                 // it with our workaround.
                 response.setStatus(oldResponseStatus);
-            }
-            else
-            {
+            } else {
                 // It looks like handleColibriJSON() indeed handled the request.
                 endResponse(target, baseRequest, request, response);
             }
-        }
-        else
-        {
+        } else {
             // Initially, we had VERSION_TARGET equal to /version. But such an
             // HTTP resource could be rewritten by Meet. In order to decrease
             // the risk of rewriting, we moved the VERSION_TARGET to
@@ -1245,8 +1166,7 @@ class HandlerImpl
             // preserving /version.
             String versionTarget = "/version";
 
-            if (versionTarget.equals(target))
-            {
+            if (versionTarget.equals(target)) {
                 target = target.substring(versionTarget.length());
 
                 handleVersionJSON(target, baseRequest, request, response);
