@@ -23,6 +23,7 @@ import net.java.sip.communicator.util.*;
 import org.jitsi.meet.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.videobridge.Videobridge;
 import org.jitsi.xmpp.component.*;
 import org.jitsi.xmpp.util.*;
 import org.jxmpp.jid.*;
@@ -162,6 +163,17 @@ public class ComponentImpl
     }
 
     /**
+     * Returns the {@link Videobridge} instance that is managing conferences
+     * for this component. Returns <tt>null</tt> if no instance is running.
+     *
+     * @return the videobridge instance, <tt>null</tt> when none is running.
+     */
+    public Videobridge getVideobridge()
+    {
+        return common.getVideobridge();
+    }
+
+    /**
      * Handles an <tt>org.xmpp.packet.IQ</tt> stanza of type <tt>get</tt> or
      * <tt>set</tt> which represents a request. Converts the specified
      * <tt>org.xmpp.packet.IQ</tt> to an
@@ -183,11 +195,6 @@ public class ComponentImpl
     {
         try
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("RECV: " + iq.toXML());
-            }
-
             org.jivesoftware.smack.packet.IQ smackIQ = IQUtils.convert(iq);
             // Failed to convert to Smack IQ ?
             if (smackIQ == null)
@@ -221,11 +228,6 @@ public class ComponentImpl
             else
             {
                 resultIQ = IQUtils.convert(resultSmackIQ);
-
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug("SENT: " + resultIQ.toXML());
-                }
             }
 
             return resultIQ;
